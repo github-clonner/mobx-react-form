@@ -19,6 +19,7 @@ export default {
   @action
   submit(o = {}) {
     this.$submitting = true;
+    this.$submitted += 1;
 
     const exec = isValid => isValid
       ? this.execHook('onSuccess', o)
@@ -65,11 +66,12 @@ export default {
   },
 
   deepCheck(type, prop, fields) {
-    return _.reduce(fields.values(), (check, field) => {
-      if (field.fields.size === 0) {
+    const $fields = utils.getObservableMapValues(fields);
+    return _.transform($fields, (check, field) => {
+      if (!field.fields.size || utils.props.exceptions.includes(prop)) {
         check.push(field[prop]);
-        return check;
       }
+
       const $deep = this.deepCheck(type, prop, field.fields);
       check.push(utils.checkPropType({ type, data: $deep }));
       return check;
@@ -81,45 +83,56 @@ export default {
    OR Create Field if 'undefined'
    */
   update(fields) {
-    const $fields = parser.prepareFieldsData({ fields }, this.state.strict);
-    this.deepUpdate($fields);
+    if (!_.isPlainObject(fields)) {
+      throw new Error('The update() method accepts only plain objects.');
+    }
+
+    return this.deepUpdate(parser.prepareFieldsData({ fields }));
   },
 
   @action
   deepUpdate(fields, path = '', recursion = true) {
     _.each(fields, (field, key) => {
-      const $path = _.trimStart(`${path}.${key}`, '.');
+      const $key = _.has(field, 'name') ? field.name : key;
+      const $path = _.trimStart(`${path}.${$key}`, '.');
       const $field = this.select($path, null, false);
       const $container = this.select(path, null, false)
         || this.state.form.select(this.path, null, false);
 
-      if (!_.isNil($field) && !_.isNil(field)) {
+
+      if (!_.isNil($field) && !_.isUndefined(field)) {
         if (_.isArray($field.values())) {
-          _.each($field.fields.values(), $f =>
-            $field.fields.delete($f.name));
+          let n = _.max(_.map(field.fields, (f, i) => Number(i)))
+          if (n === undefined) n = -1 // field's value is []
+          _.each(utils.getObservableMapValues($field.fields), $f => {
+            if (Number($f.name) > n)
+              $field.fields.delete($f.name)
+          });
         }
-        if (_.isNil(field.fields)) {
-          $field.value = field;
+        if (_.isNull(field) || _.isNil(field.fields)) {
+          $field.$value = parser.parseInput($field.$input, {
+            separated: field
+          });
           return;
         }
       }
 
-      if (!_.isNil($container)) {
+      if (!_.isNil($container) && _.isNil($field)) {
         // get full path when using update() with select() - FIX: #179
         const $newFieldPath = _.trimStart([this.path, $path].join('.'), '.');
         // init field into the container field
-        $container.initField(key, $newFieldPath, field, true);
+        $container.initField($key, $newFieldPath, field, true);
       }
-
-      if (recursion) {
-        // handle nested fields if undefined or null
-        const $fields = parser.pathToFieldsTree(this.state.struct(), $path);
-        this.deepUpdate($fields, $path, false);
-      }
-
-      if (recursion && _.has(field, 'fields') && !_.isNil(field.fields)) {
-        // handle nested fields if defined
-        this.deepUpdate(field.fields, $path);
+      else if (recursion) {
+        if (_.has(field, 'fields') && !_.isNil(field.fields)) {
+          // handle nested fields if defined
+          this.deepUpdate(field.fields, $path);
+        }
+        else {
+          // handle nested fields if undefined or null
+          const $fields = parser.pathToFieldsTree(this.state.struct(), $path);
+          this.deepUpdate($fields, $path, false);
+        }
       }
     });
   },
@@ -154,7 +167,7 @@ export default {
     Get Fields Props Recursively
    */
   deepGet(prop, fields) {
-    return _.reduce(fields.values(), (obj, field) => {
+    return _.transform(utils.getObservableMapValues(fields), (obj, field) => {
       const $nested = $fields => ($fields.size !== 0)
         ? this.deepGet(prop, $fields)
         : undefined;
@@ -165,8 +178,9 @@ export default {
 
       if (_.isString(prop)) {
         const removeValue = (prop === 'value') &&
-          ((this.state.options.get('retrieveOnlyDirtyValues', this) && field.isPristine) ||
-          (this.state.options.get('retrieveOnlyEnabledFields', this) && field.disabled));
+         ((this.state.options.get('retrieveOnlyDirtyValues', this) && field.isPristine) ||
+          (this.state.options.get('retrieveOnlyEnabledFields', this) && field.disabled) ||
+          (this.state.options.get('softDelete', this) && field.deleted));
 
         if (field.fields.size === 0) {
           delete obj[field.key]; // eslint-disable-line
@@ -224,77 +238,74 @@ export default {
     const err = 'You are updating a not existent field:';
     const isStrict = this.state.options.get('strictUpdate', this);
 
+    if (_.isNil(data)) {
+      this.each(field => field.clear(true));
+      return;
+    }
+    
     _.each(data, ($val, $key) => {
-      const $path = _.trimStart(`${path}.${$key}`, '.');
-      // get the field by path joining keys recursively
-      const field = this.select($path, null, isStrict);
-      // if no field found when is strict update, throw error
-      if (isStrict) utils.throwError($path, field, err);
-      // update the field/fields if defined
-      if (!_.isUndefined(field)) {
-        // update field values or others props
-        field.set($, $val, recursion);
-        // update values recursively only if field has nested
-        if (field.fields.size && _.isObject($val)) {
-          this.deepSet($, $val, $path, recursion);
+        const $path = _.trimStart(`${path}.${$key}`, '.');
+        // get the field by path joining keys recursively
+        const field = this.select($path, null, isStrict);
+        // if no field found when is strict update, throw error
+        if (isStrict) utils.throwError($path, field, err);
+        // update the field/fields if defined
+        if (!_.isUndefined(field)) {
+          // update field values or others props
+          if (!_.isUndefined($val)) {
+            field.set($, $val, recursion);
+          }
+          // update values recursively only if field has nested
+          if (field.fields.size && _.isObject($val)) {
+            this.deepSet($, $val, $path, recursion);
+          }
         }
-      }
-    });
+      });
   },
 
   /**
    Add Field
    */
   @action
-  add(value = null, opt = {}) {
-    let $key;
-
-    if (_.has(opt, 'key')) $key = opt.key;
-    else $key = utils.maxKey(this.fields);
-
-    const tree = parser.pathToFieldsTree(this.state.struct(), this.path, 0, true);
-    const $path = key => _.trimStart([this.path, key].join('.'), '.');
-
-    _.each(tree, field => this.initField($key, $path($key), field));
-
-    if (!_.isNil(value)) {
-      const field = this.select($key, null, false)
-        || this.initField($key, $path($key));
-
-      if (_.isPlainObject(value)) {
-        field.update(value);
-      }
-
-      field.set('initial', value);
-      field.set('default', value);
-      field.set('value', value);
+  add(obj) {
+    if (utils.isArrayOfObjects(obj)) {
+      return _.each(obj, values => this.update({
+        [utils.maxKey(this.fields)]: values,
+      }));
     }
 
-    return $key;
+    let key; // eslint-disable-next-line
+    if (_.has(obj, 'key')) key = obj.key;
+    if (_.has(obj, 'name')) key = obj.name;
+    if (!key) key = utils.maxKey(this.fields);
+
+    const $path = $key => _.trimStart([this.path, $key].join('.'), '.');
+    const tree = parser.pathToFieldsTree(this.state.struct(), this.path, 0, true);
+    return this.initField(key, $path(key), _.merge(tree[0], obj));
   },
 
   /**
    Del Field
    */
   @action
-  del(partialPath = null) {
-    const path = parser.parsePath(utils.$try(partialPath, this.path));
+  del($path = null) {
+    const isStrict = this.state.options.get('strictDelete', this);
+    const path = parser.parsePath(utils.$try($path, this.path));
+    const fullpath = _.trim([this.path, path].join('.'), '.');
+    const container = this.container($path);
     const keys = _.split(path, '.');
     const last = _.last(keys);
-    const cpath = _.trimEnd(path, `.${last}`);
-    const isStrict = this.state.options.get('strictDelete', this);
-
-    const container = this.select(cpath, null, false)
-      || this.state.form.select(cpath, null, false)
-      || this.state.form.select(this.path, null, true);
 
     if (isStrict && !container.fields.has(last)) {
       const msg = `Key "${last}" not found when trying to delete field`;
-      const $path = _.trim([this.path, path].join('.'), '.');
-      utils.throwError($path, null, msg);
+      utils.throwError(fullpath, null, msg);
     }
 
-    container.fields.delete(last);
+    if (this.state.options.get('softDelete', this)) {
+      return this.select(fullpath).set('deleted', true);
+    }
+
+    return container.fields.delete(last);
   },
 
 };

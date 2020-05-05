@@ -1,3 +1,51 @@
+# 2.0.8
+* pull #528
+
+# 2.0.7
+* pull #525
+
+# 2.0.6
+* fix #521
+
+# 2.0.5
+* fix #514 #516
+
+# 2.0.4
+* fix #507
+
+# 2.0.3
+* introduced `fallback` form option
+
+# 2.0
+* introduced `validateOnChangeAfterSubmit` form option
+
+# 1.39
+* reimplemented `initial`/`default` `isDirty`/`isPristine`
+
+# 1.38
+* introduced `validateDeletedFields` form option
+
+# 1.37
+* decoupled validation plugins drivers
+* introduced `yup` validation plugin
+* changed validation plugins `extend` callback props
+* AJV schema definition moved to plugin setup
+* introduced `softDelete` option
+* introduced `submitted` & `validated` prop
+
+# 1.35
+* mobx5 support
+* Introduced observable `type` field prop
+* Removed `label` fallback to field `name`
+* fix: #432 #415 #355 #347 #425 #429 #416
+
+# 1.34
+* Added `struct` constructor prop
+* Reimplemented add() method
+
+# 1.33
+* mobx4 support
+
 # 1.32
 * Validate with different props.
 * Reimplemented Event Hooks & Handlers.

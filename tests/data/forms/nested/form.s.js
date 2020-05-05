@@ -1,10 +1,12 @@
 import { expect } from 'chai';
 import validatorjs from 'validatorjs';
 import { Form } from '../../../../src';
+import dvr from '../../../../src/validators/DVR';
 
 const fields = [
   'club.name',
   'club.city',
+  'club.bouncer',
   'members',
   'members[].firstname',
   'members[].lastname',
@@ -85,7 +87,7 @@ class NewForm extends Form {
 
   plugins() {
     return {
-      dvr: validatorjs,
+      dvr: dvr(validatorjs),
     };
   }
 
@@ -110,6 +112,7 @@ class NewForm extends Form {
           club: {
             name: 'club-name-set-value',
             city: 'club-city-set-value',
+            bouncer: undefined,
           },
         });
 

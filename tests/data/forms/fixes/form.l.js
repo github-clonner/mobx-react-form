@@ -2,6 +2,9 @@ import validatorjs from 'validatorjs';
 import { expect } from 'chai';
 import { Form } from '../../../../src';
 
+import dvr from '../../../../src/validators/DVR';
+import vjf from '../../../../src/validators/VJF';
+
 const fields = [
   'email',
 ];
@@ -18,7 +21,8 @@ class NewForm extends Form {
 
   plugins() {
     return {
-      dvr: validatorjs,
+      vjf: vjf(),
+      dvr: dvr(validatorjs),
     };
   }
 
@@ -31,6 +35,7 @@ class NewForm extends Form {
   hooks() {
     return {
       onInit() {
+        this.$('email').set('type', 'email'); // #415
         this.$('email').set('value', 'notAnEmail');
 
         describe('Form $L onInit() checks', () => {

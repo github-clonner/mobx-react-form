@@ -14,6 +14,9 @@ describe('Check $A Nested Fields', () => {
   it('$A user.email container() path should be equal to "user"', () =>
     expect($.$A.$('user.email').container().path).to.be.equal('user'));
 
+  it('$A user container() should be $A', () =>
+    expect($.$A.$('user').container()).to.equal($.$A));
+
   it('$A user.email.value should be equal to "notAnEmail"', () =>
     expect($.$A.$('user.email').value).to.be.equal('notAnEmail'));
 
@@ -145,8 +148,16 @@ describe('Check Nested $C Fields computed deep check()', () => {
   it('$C check(isDirty, deep=true) should be true', () =>
     expect($.$C.check('isDirty', true)).to.be.true);
 
+  it('$C .isDirty should be true', () =>
+    expect($.$C.isDirty).to.be.true);
+
+  // to fix // fixed ?
   it('$C check(isPristine, deep=true) should be false', () =>
     expect($.$C.check('isPristine', true)).to.be.false);
+
+  // to fix // fixed ?
+  it('$C .isPristine should be false', () =>
+    expect($.$C.isPristine).to.be.false);
 
   it('$C check(isDefault, deep=true) should be false', () =>
     expect($.$C.check('isDefault', true)).to.be.false);
@@ -172,7 +183,7 @@ describe('Check Nested $N bindings props', () => {
     .bind();
 
   it('$N membersFirstNameBindings floatingLabelText should be equal to empty string', () =>
-    expect(membersFirstNameBindings).to.have.property('floatingLabelText', 'firstname'));
+    expect(membersFirstNameBindings).to.have.property('floatingLabelText', 'First Name Label'));
 
   it('$N membersFirstNameBindings value should be equal to "Clint"', () =>
     expect(membersFirstNameBindings).to.have.property('value', 'Clint'));
@@ -231,6 +242,9 @@ describe('Check Nested $T value on add()', () => {
   it('$T member.hobbies container() path should be equal to "member"', () =>
     expect($.$T.$('member.hobbies').container().path).to.equal('member'));
 
+  it('$T member container() path should be $T', () =>
+    expect($.$T.$('member').container()).to.equal($.$T));
+
   it('$T container(member.hobbies) path should be equal to "member"', () =>
     expect($.$T.container('member.hobbies').path).to.equal('member'));
 
@@ -258,11 +272,14 @@ describe('Check Nested $T value on add()', () => {
   it('$T member.hobbies[1] default should be equal to "BBB"', () =>
     expect($.$T.$('member.hobbies[1]').default).to.equal('BBB'));
 
-  it('$T member.info[0] default should be an object', () =>
-    expect($.$T.$('member.info[0]').default).to.be.an('object'));
+  // it('$T member.info[0] default should be an object', () =>
+  //   expect($.$T.$('member.info[0]').default).to.be.an('object'));
 
-  it('$T member.info[0] initial should be an object', () =>
-    expect($.$T.$('member.info[0]').initial).to.be.an('object'));
+  // it('$T member.info[0] initial should be an object', () =>
+  //   expect($.$T.$('member.info[0]').initial).to.be.an('object'));
+
+  it('$T member.info[0] value should be an object', () =>
+    expect($.$T.$('member.info[0]').value).to.be.an('object'));
 
   it('$T member.info[0].firstname value should be equal to "AAA"', () =>
     expect($.$T.$('member.info[0].firstname').value).to.equal('AAA'));
@@ -273,17 +290,54 @@ describe('Check Nested $T value on add()', () => {
   it('$T member.info[0].type value should be equal to "XXX"', () =>
     expect($.$T.$('member.info[0].type').value).to.equal('XXX'));
 
+  it('$T member.info[1].type value should be equal to "XXX-2"', () =>
+    expect($.$T.$('member.info[1].type').value).to.equal('XXX-2'));
+
+  it('$T member.info[2].type value should be equal to "YYY"', () =>
+    expect($.$T.$('member.info[2].type').value).to.equal('YYY'));
+
+  it('$T member.data[0].update value should be equal to "update-value"', () =>
+    expect($.$T.$('member.data[0].update').value).to.equal('update-value'));
+
+  it('$T member.data[0].subzero value should be equal to "subzero-value"', () =>
+    expect($.$T.$('member.data[0].subzero').value).to.equal('subzero-value'));
+
+  it('$T member.data[0].subzero label should be equal to "subzero-label"', () =>
+    expect($.$T.$('member.data[0].subzero').label).to.equal('subzero-label'));
+
   it('$T notIncrementalFields fields.get(notIncrementalKey) should be an object', () =>
     expect($.$T.$('notIncrementalFields').fields.get('notIncrementalKey')).to.be.an('object'));
 
   it('$T notIncrementalFields[notIncrementalKey] value should be equal to "XXX"', () =>
     expect($.$T.$('notIncrementalFields[notIncrementalKey]').value).to.equal('XXX'));
 
+  it('$T notIncrementalFields[notIncrementalKey] label should be equal to "XXX-label"', () =>
+    expect($.$T.$('notIncrementalFields[notIncrementalKey]').label).to.equal('XXX-label'));
+
   it('$T notIncrementalFields .fields.size should be equal to 1', () =>
     expect($.$T.$('notIncrementalFields').fields.size).to.equal(1));
+});
 
-  it('$T notIncrementalFields add() return value should be equal to "anotherKey"', () =>
-    expect($.$T.$('notIncrementalFields').add('YYY', { key: 'anotherKey' })).to.equal('anotherKey'));
+describe('Check $T1 Nested Fields', () => {
+  it('$T1 state.options.get(softDelete) should be true', () =>
+    expect($.$T1.state.options.get('softDelete')).to.be.true);
+
+  it('$T1 hobbies .fields.size should be equal to 3', () =>
+    expect($.$T1.$('hobbies').fields.size).to.equal(3));
+
+    it('$T1 hobbies[0].deleted should be false', () =>
+    expect($.$T1.$('hobbies[0]').deleted).to.be.false);
+
+    it('$T1 hobbies[1].deleted should be true', () =>
+    expect($.$T1.$('hobbies[1]').deleted).to.be.true);
+
+    it('$T1 hobbies[2].deleted should be false', () =>
+    expect($.$T1.$('hobbies[2]').deleted).to.be.false);
+
+    it('$T1 get(value) value to be deep equal', () =>
+      expect($.$T1.get('value')).to.be.deep.equal({
+        hobbies: ['AAA', 'CCC']
+      }));
 });
 
 describe('Check $U Nested Fields', () => {

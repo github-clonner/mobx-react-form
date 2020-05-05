@@ -81,8 +81,8 @@ describe('Check Nested $N Values', () => {
   it('$N nested.field get(value) should be a number', () =>
     expect($.$N.$('nested.field').get('value')).to.be.a('number'));
 
-  it('$N club value should be equal to "HELLO"', () =>
-    expect($.$N.$('club').value).to.be.equal('HELLO'));
+  it('$N club value should be equal to empty object', () =>
+    expect($.$N.$('club').value).to.deep.equal({ name: '', city: '' }));
 
   it('$N members.0.firstname value should be equal to "Clint"', () =>
     expect($.$N.$('members.0.firstname').value).to.be.equal('Clint'));
@@ -155,9 +155,11 @@ describe('Check Nested $P Values after reset', () => {
 });
 
 describe('Check Nested $R values()', () => {
-  // retrieveOnlyDirtyValues: true
   it('$R values() should be empty object', () =>
-    expect($.$R.values()).to.be.empty);
+    expect($.$R.values()).to.be.deep.equal($.$R.initials()));
+
+    it('$R (members).value should be equal to (members).initial', () =>
+    expect($.$R.$('members').value).to.be.deep.equal($.$R.$('members').initial));
 });
 
 describe('Check Nested $Q Values after reset', () => {
@@ -172,4 +174,15 @@ describe('Check Nested $Q Values after reset', () => {
 
   it('$Q members[1].hobbies[1] value should be equal to "Basket"', () =>
     expect($.$Q.$('members[1].hobbies[1]').value).to.be.equal('Basket'));
+});
+
+describe('Check Nested $S Values', () => {
+  it('$S club.name value should be equal to "club-name-set-value-intercepted"', () =>
+    expect($.$S.$('club.name').value).to.be.equal('club-name-set-value-intercepted'));
+
+  it('$S club.city value should be equal to "club-city-set-value"', () =>
+    expect($.$S.$('club.city').value).to.be.equal('club-city-set-value'));
+
+  it('$S club.bouncer value should be empty string', () =>
+    expect($.$S.$('club.bouncer').value).to.equal(''));
 });

@@ -41,15 +41,19 @@ export default {
   /**
     Get Container
    */
-  container(path) {
-    const $path = parser.parsePath(utils.$try(path, this.path));
-    const cpath = _.trim($path.replace(new RegExp('[^./]+$'), ''), '.');
+  container($path) {
+    const path = parser.parsePath(utils.$try($path, this.path));
+    const cpath = _.trim(path.replace(new RegExp('[^./]+$'), ''), '.');
 
-    if (!!this.path && _.isNil(path)) {
-      return this.state.form.select(cpath, null, false);
+    if (!!this.path && _.isNil($path)) {
+      return cpath !== ''
+        ? this.state.form.select(cpath, null, false)
+        : this.state.form;
     }
 
-    return this.select(cpath, null, false);
+    return cpath !== ''
+      ? this.select(cpath, null, false)
+      : this;
   },
 
   /**
@@ -63,7 +67,7 @@ export default {
    Map Fields
   */
   map(cb) {
-    return this.fields.values().map(cb);
+    return utils.getObservableMapValues(this.fields).map(cb);
   },
 
   /**
@@ -106,7 +110,7 @@ export default {
    */
   each(iteratee, fields = null, depth = 0) {
     const $fields = fields || this.fields;
-    _.each($fields.values(), (field, index) => {
+    _.each(utils.getObservableMapValues($fields), (field, index) => {
       iteratee(field, index, depth);
 
       if (field.fields.size !== 0) {

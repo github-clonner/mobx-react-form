@@ -1,4 +1,4 @@
-import { computed } from 'mobx';
+import { observable, computed, toJS } from 'mobx';
 import _ from 'lodash';
 
 import {
@@ -9,6 +9,12 @@ import {
 export default class Base {
   noop = () => {};
 
+  @observable $submitted = 0;
+  @observable $submitting = false;
+
+  @observable $validated = 0;
+  @observable $validating = false;
+
   execHook = (name, fallback = {}) => $try(
     fallback[name],
     this.$hooks[name],
@@ -18,17 +24,34 @@ export default class Base {
 
   execHandler = (name, args, fallback = null) => [$try(
     this.$handlers[name] && this.$handlers[name].apply(this, [this]),
-    this.handlers && this.handlers.apply(this, [this])[name].apply(this, [this]),
+    this.handlers && this.handlers.apply(this, [this])[name] &&
+      this.handlers.apply(this, [this])[name].apply(this, [this]),
     fallback,
     this.noop,
   ).apply(this, [...args]), this.execHook(name)];
+
+  @computed get submitted() {
+    return toJS(this.$submitted);
+  }
+
+  @computed get submitting() {
+    return toJS(this.$submitting);
+  }
+
+  @computed get validated() {
+    return toJS(this.$validated);
+  }
+
+  @computed get validating() {
+    return toJS(this.$validating);
+  }
 
   @computed get hasIncrementalKeys() {
     return (this.fields.size && hasIntKeys(this.fields));
   }
 
   @computed get hasNestedFields() {
-    return (this.hasInitialNestedFields || this.fields.size !== 0);
+    return (this.fields.size !== 0);
   }
 
   @computed get size() {

@@ -1,4 +1,5 @@
 /coverage
+/demo
 /demo/build
 /demo/node_modules
 /es6
@@ -12,3 +13,4 @@
 npm-debug.log
 coverage.lcov
 codecov.yml
+yarn-error.log

@@ -16,7 +16,7 @@ const values = {
   nested: {
     field: 5,
   },
-  club: 'HELLO',
+  club: null,
   members: [{
     firstname: 'Clint',
     lastname: '',
@@ -34,6 +34,10 @@ const input = {
 
 const output = {
   'nested.field': value => Number(value),
+};
+
+const labels = {
+  'members[].firstname': 'First Name Label',
 };
 
 const placeholders = {
@@ -62,5 +66,5 @@ class NewForm extends Form {
 }
 
 export default new NewForm({
-  fields, values, input, output, placeholders, bindings,
+  fields, values, input, output, placeholders, bindings, labels,
 }, { name: 'Nested-N' });

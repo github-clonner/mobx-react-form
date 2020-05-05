@@ -10,11 +10,18 @@ const defaultClearValue = ({ value }) => {
   return undefined;
 };
 
-const defaultValue = ({ type, isEmptyArray = false }) => {
+const defaultValue = ({
+  type,
+  nullable = false,
+  isEmptyArray = false
+}) => {
   if (type === 'date') return null;
+  if (type === 'datetime-local') return null;
   if (type === 'checkbox') return false;
   if (type === 'number') return 0;
-  return isEmptyArray ? [] : '';
+  if (nullable) return null;
+  if (isEmptyArray) return [];
+  return '';
 };
 
 const parsePath = (path) => {
@@ -25,13 +32,11 @@ const parsePath = (path) => {
 };
 
 const parseInput = (input, {
-  type, isEmptyArray, separated, unified, initial,
+  type, isEmptyArray, nullable, separated, unified, fallback,
 }) =>
-  input(utils.$try(separated, unified, initial, defaultValue({ type, isEmptyArray })));
-
-// make integers labels empty
-const parseGetLabel = label =>
-  _.isInteger(_.parseInt(label)) ? '' : label;
+  input(utils.$try(separated, unified, fallback, defaultValue({
+    type, isEmptyArray, nullable
+  })));
 
 const parseArrayProp = ($val, $prop) => {
   const $values = _.values($val);
@@ -47,7 +52,7 @@ const parseCheckArray = (field, value, prop) =>
     : value;
 
 const parseCheckOutput = ($field, $prop) =>
-  ($prop === 'value')
+  (($prop === 'value') && $field.$output)
     ? $field.$output($field[$prop])
     : $field[$prop];
 
@@ -70,8 +75,8 @@ const defineFieldsFromStruct = (struct, add = false) =>
 const handleFieldsArrayOfStrings = ($fields, add = false) => {
   let fields = $fields;
   // handle array with field struct (strings)
-  if (utils.isStruct({ fields })) {
-    fields = _.reduce(fields, ($obj, $) => {
+  if (utils.isStruct(fields)) {
+    fields = _.transform(fields, ($obj, $) => {
       const pathStruct = _.split($, '.');
       // as array of strings (with empty values)
       if (!pathStruct.length) return Object.assign($obj, { [$]: '' });
@@ -86,7 +91,7 @@ const handleFieldsArrayOfObjects = ($fields) => {
   let fields = $fields;
   // handle array of objects (with unified props)
   if (utils.isArrayOfObjects(fields)) {
-    fields = _.reduce(fields, ($obj, field) => {
+    fields = _.transform(fields, ($obj, field) => {
       if (utils.hasUnifiedProps({ fields: { field } }) && !_.has(field, 'name')) return undefined;
       return Object.assign($obj, { [field.name]: field });
     }, {});
@@ -95,7 +100,7 @@ const handleFieldsArrayOfObjects = ($fields) => {
 };
 
 const handleFieldsNested = (fields, strictProps = true) =>
-  _.reduce(fields, (obj, field, key) => {
+  _.transform(fields, (obj, field, key) => {
     if (utils.allowNested(field, strictProps)) {
       // define nested field
       return Object.assign(obj, {
@@ -104,7 +109,6 @@ const handleFieldsNested = (fields, strictProps = true) =>
     }
     return Object.assign(obj, { [key]: field });
   }, {});
-
 
 /* mapNestedValuesToUnifiedValues
 
@@ -161,7 +165,7 @@ TO:
 
 */
 const reduceValuesToUnifiedFields = values =>
-  _.reduce(values, (obj, value, key) =>
+  _.transform(values, (obj, value, key) =>
     Object.assign(obj, {
       [key]: {
         value,
@@ -172,7 +176,7 @@ const reduceValuesToUnifiedFields = values =>
 /*
   Fallback Unified Props to Sepated Mode
 */
-const handleFieldsPropsFallback = (fields, initial) => {
+const handleFieldsPropsFallback = (fields, initial, fallback) => {
   if (!_.has(initial, 'values')) return fields;
   // if the 'values' object is passed in constructor
   // then update the fields definitions
@@ -180,14 +184,17 @@ const handleFieldsPropsFallback = (fields, initial) => {
   if (utils.hasUnifiedProps({ fields })) {
     values = reduceValuesToUnifiedFields(values);
   }
-  return _.merge(fields, values);
+  return _.merge(fields, _.transform(values, (result, v, k) => {
+    if (_.isArray(fields[k])) result[k] = v
+    if (!(k in fields) && (!isNaN(Number(k)) || fallback)) result[k] = v
+  }, {}));
 };
 
 const mergeSchemaDefaults = (fields, validator) => {
   if (validator) {
-    const { properties } = validator.schema;
-    if (_.isEmpty(fields) && !!properties) {
-      _.each(properties, (prop, key) => {
+    const schema = _.get(validator.plugins, 'svk.config.schema');
+    if (_.isEmpty(fields) && schema && !!schema.properties) {
+      _.each(schema.properties, (prop, key) => {
         _.set(fields, key, {
           value: prop.default,
           label: prop.title,
@@ -198,12 +205,16 @@ const mergeSchemaDefaults = (fields, validator) => {
   return fields;
 };
 
-const prepareFieldsData = (initial, strictProps = true) => {
-  let fields = initial.fields || {};
-  fields = handleFieldsArrayOfStrings(fields, false);
+const prepareFieldsData = (initial, strictProps = true, fallback = true) => {
+  let fields = _.merge(
+    handleFieldsArrayOfStrings(initial.fields, false),
+    handleFieldsArrayOfStrings(initial.struct, false),
+  );
+
   fields = handleFieldsArrayOfObjects(fields);
-  fields = handleFieldsPropsFallback(fields, initial);
+  fields = handleFieldsPropsFallback(fields, initial, fallback);
   fields = handleFieldsNested(fields, strictProps);
+
   return fields;
 };
 
@@ -220,7 +231,6 @@ export default {
   defaultClearValue,
   parseInput,
   parsePath,
-  parseGetLabel,
   parseArrayProp,
   parseCheckArray,
   parseCheckOutput,

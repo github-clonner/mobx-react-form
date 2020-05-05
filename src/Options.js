@@ -1,4 +1,4 @@
-import { observable, action, toJS, extendObservable } from 'mobx';
+import { observable, action, toJS, extendObservable, set } from 'mobx';
 import _ from 'lodash';
 import { uniqueId } from './utils';
 
@@ -6,6 +6,7 @@ export default class Options {
 
   @observable options = {
     uniqueId,
+    fallback: true,
     defaultGenericError: null,
     submitThrowsError: true,
     showErrorsOnInit: false,
@@ -17,13 +18,17 @@ export default class Options {
     validateOnInit: true,
     validateOnBlur: true,
     validateOnChange: false,
+    validateOnChangeAfterInitialBlur: false,
+    validateOnChangeAfterSubmit: false,
     validateDisabledFields: false,
+    validateDeletedFields: false,
+    validatePristineFields: true,
     strictUpdate: false,
     strictDelete: true,
+    softDelete: false,
     retrieveOnlyDirtyValues: false,
     retrieveOnlyEnabledFields: false,
     autoParseNumbers: false,
-    allowRequired: false,
     validationDebounceWait: 250,
     validationDebounceOptions: {
       leading: false,
@@ -46,6 +51,10 @@ export default class Options {
 
   @action
   set(options) {
-    extendObservable(this.options, options);
+    if (set) {
+      set(this.options, options);
+    } else {
+      extendObservable(this.options, options);
+    }
   }
 }
